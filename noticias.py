@@ -1,46 +1,27 @@
 import streamlit as st
 import feedparser
-from deep_translator import GoogleTranslator
+from deep_translator import MyMemoryTranslator
 import re
 
-# 1. Configuração
-st.set_page_config(page_title="Radar Mundial pt-PT", page_icon="📡", layout="wide")
+# Configuração da página
+st.set_page_config(page_title="Radar Portugal Pro", page_icon="📡", layout="wide")
 
-# 2. Dicionário de "Tradução" BR -> PT
-# Podes adicionar aqui mais palavras que te irritem!
-DICIONARIO_PT = {
-    "usuário": "utilizador",
-    "celular": "telemóvel",
-    "tela": "ecrã",
-    "trem": "comboio",
-    "esporte": "desporto",
-    "equipe": "equipa",
-    "café da manhã": "pequeno-almoço",
-    "gramado": "relvado"
-}
+st.title("📡 Radar Mundial (Português de Portugal)")
 
-def corrigir_sotaque(texto):
-    for br, pt in DICIONARIO_PT.items():
-        # Substitui ignorando se é maiúscula ou minúscula
-        padrao = re.compile(re.escape(br), re.IGNORECASE)
-        texto = padrao.sub(pt, texto)
-    return texto
-
+# Esta é a função que faz a magia do pt-PT
 @st.cache_data(ttl=600)
-def traduzir(texto):
+def traduzir_pt(texto):
     if not texto: return ""
     try:
+        # Limpar lixo de HTML
         texto_limpo = re.sub('<[^<]+?>', '', texto)
-        # Tradução base
-        traducao = GoogleTranslator(source='auto', target='pt').translate(texto_limpo)
-        # Aplica o nosso filtro de Portugal
-        return corrigir_sotaque(traducao)
+        # O MyMemory é o único que nos deixa pedir sotaque de Portugal (pt-PT)
+        traducao = MyMemoryTranslator(source='auto', target='pt-PT').translate(texto_limpo)
+        return traducao
     except:
         return texto
 
-# --- O resto do código (Dashboard) ---
-st.title("📡 Radar Mundial: Sotaque de Portugal")
-
+# Lista de canais (CNN, BBC, Al Jazeera)
 fontes = [
     {"nome": "CNN (EUA)", "url": "http://rss.cnn.com/rss/edition.rss", "cor": "🔴"},
     {"nome": "BBC (UK)", "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "cor": "⚪"},
@@ -48,12 +29,17 @@ fontes = [
 ]
 
 col1, col2 = st.columns(2)
+
 for i, fonte in enumerate(fontes):
     coluna = col1 if i % 2 == 0 else col2
     with coluna:
         st.subheader(f"{fonte['cor']} {fonte['nome']}")
         feed = feedparser.parse(fonte['url'])
+        
         for item in feed.entries[:5]:
-            with st.expander(f"📌 {traduzir(item.title)}"):
-                st.write(traduzir(item.get('summary', '')))
-                st.markdown(f"[🔗 Original]({item.link})")
+            # Aqui usamos a função de tradução pt-PT
+            titulo = traduzir_pt(item.title)
+            with st.expander(f"📌 {titulo}"):
+                resumo = traduzir_pt(item.get('summary', ''))
+                st.write(resumo)
+                st.markdown(f"[🔗 Ver original]({item.link})")
