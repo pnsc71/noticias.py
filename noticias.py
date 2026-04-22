@@ -4,45 +4,65 @@ from deep_translator import GoogleTranslator
 import re
 import html
 
-# 1. Configuração e Design do Dashboard
+# 1. Configuração e Design Mobile-First
 st.set_page_config(page_title="Radar Elite", page_icon="📡", layout="wide")
 
-# Imagem fixa para consistência
 IMAGEM_FIXA = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&h=300&q=80"
 
 st.markdown(f"""
     <style>
     .news-card {{
         background-color: #1e212b;
-        padding: 20px;
-        border-radius: 15px;
+        padding: 15px;
+        border-radius: 12px;
         border-bottom: 4px solid #007bff;
-        margin-bottom: 20px;
-        min-height: 380px;
+        margin-bottom: 15px;
+        height: 420px; /* Altura fixa para manter a grelha alinhada */
+        overflow: hidden;
     }}
     .breaking-card {{
         background-color: #2d0a0a;
-        padding: 20px;
-        border-radius: 15px;
+        padding: 15px;
+        border-radius: 12px;
         border: 2px solid #ff4b4b;
-        margin-bottom: 20px;
-        min-height: 380px;
+        margin-bottom: 15px;
+        height: 420px;
+        overflow: hidden;
     }}
     .img-container img {{
         width: 100%;
-        border-radius: 10px;
-        margin-bottom: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
         object-fit: cover;
-        height: 160px;
+        height: 140px;
     }}
     .tag {{
-        padding: 4px 10px;
-        border-radius: 5px;
-        font-size: 11px;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 10px;
         font-weight: bold;
         background: #333;
         color: white;
-        text-transform: uppercase;
+    }}
+    .card-title {{
+        font-size: 16px;
+        font-weight: bold;
+        margin-top: 10px;
+        height: 60px; /* Força o título a ocupar 3 linhas no máximo */
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+    }}
+    .card-text {{
+        font-size: 13px;
+        color: #bbb;
+        height: 60px; /* Limita o resumo para não empurrar o card */
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        margin-bottom: 10px;
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -56,7 +76,7 @@ def traduzir_pt(texto):
         return GoogleTranslator(source='en', target='pt').translate(texto_limpo)
     except: return texto
 
-# 3. Fontes de Dados
+# 3. Fontes
 fontes = [
     {"nome": "CNN Portugal", "url": "https://cnnportugal.iol.pt/rss", "traduzir": False},
     {"nome": "A Bola", "url": "https://www.abola.pt/rss/0", "traduzir": False},
@@ -65,32 +85,27 @@ fontes = [
     {"nome": "BBC World", "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "traduzir": True}
 ]
 
-# 4. Título Principal (Sem filtros)
+# 4. Título
 st.title("🛰️ Radar Elite")
-st.write("### As tuas notícias em tempo real")
-st.divider()
 
-# 5. Agregação Direta
+# 5. Agregação e Grelha
 all_items = []
 for f in fontes:
     feed = feedparser.parse(f['url'])
-    for entry in feed.entries[:4]: # 4 notícias de cada fonte para não ficar gigante
+    for entry in feed.entries[:4]:
         entry['fonte_nome'] = f['nome']
         entry['precisa_traducao'] = f['traduzir']
         all_items.append(entry)
 
-# 6. Exibição em Grelha
 cols = st.columns(2)
 for i, item in enumerate(all_items):
     col_idx = i % 2
     with cols[col_idx]:
-        # Processamento
         titulo = traduzir_pt(item.title) if item['precisa_traducao'] else html.unescape(item.title)
         resumo_raw = item.get('summary', '') or item.get('description', '')
-        resumo = traduzir_pt(resumo_raw[:200]) if item['precisa_traducao'] else html.unescape(resumo_raw[:200])
-        resumo = re.sub('<[^<]+?>', '', resumo)[:120] + "..."
+        resumo = traduzir_pt(resumo_raw) if item['precisa_traducao'] else html.unescape(resumo_raw)
+        resumo = re.sub('<[^<]+?>', '', resumo)
         
-        # Alerta Breaking News
         palavras_alerta = ["URGENTE", "ÚLTIMA HORA", "BOMBA", "BREAKING"]
         is_breaking = any(p in titulo.upper() for p in palavras_alerta)
         card_class = "breaking-card" if is_breaking else "news-card"
@@ -102,8 +117,8 @@ for i, item in enumerate(all_items):
                     <img src="{IMAGEM_FIXA}">
                 </div>
                 <span class="tag">{label}</span>
-                <h4 style="margin-top:12px; min-height: 50px; font-size: 18px;">{titulo}</h4>
-                <p style="font-size: 14px; color: #bbb;">{resumo}</p>
-                <a href="{item.link}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: bold;">Ler mais →</a>
+                <div class="card-title">{titulo}</div>
+                <div class="card-text">{resumo}</div>
+                <a href="{item.link}" target="_blank" style="color: #007bff; text-decoration: none; font-size: 13px; font-weight: bold;">LER MAIS →</a>
             </div>
             """, unsafe_allow_html=True)
