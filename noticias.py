@@ -34,19 +34,25 @@ col1, col2 = st.columns(2)
 for i, fonte in enumerate(fontes):
     coluna = col1 if i % 2 == 0 else col2
     with coluna:
-        st.subheader(f"{fonte['cor']} {fonte['nome']}")
-        feed = feedparser.parse(fonte['url'])
-        
         for item in feed.entries[:5]:
-            # Lógica: Traduz se necessário, caso contrário usa o original
             if fonte['traduzir']:
+                # Para as de fora, traduzimos (o MyMemory já limpa um pouco)
                 titulo = traduzir_pt(item.title)
                 resumo = traduzir_pt(item.get('summary', ''))
             else:
-                titulo = item.title
-                resumo = item.get('summary', '') or item.get('description', '')
-                # Limpa HTML básico das notícias nacionais
-                resumo = re.sub('<[^<]+?>', '', resumo)
+                # PARA AS DE PORTUGAL (Onde está o bug da CNN)
+                # 1. Forçamos a limpeza de símbolos Matrix (&#xe1;, &lt;, etc)
+                titulo = html.unescape(item.title)
+                
+                raw_resumo = item.get('summary', '') or item.get('description', '')
+                # Limpa os símbolos do resumo
+                resumo_limpo = html.unescape(raw_resumo)
+                # Remove as tags de parágrafo <p>
+                resumo = re.sub('<[^<]+?>', '', resumo_limpo)
+
+            with st.expander(f"📌 {titulo}"):
+                st.write(resumo)
+                st.markdown(f"[🔗 Ver notícia]({item.link})")
 
             with st.expander(f"📌 {titulo}"):
                 st.write(resumo)
