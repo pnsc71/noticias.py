@@ -1,8 +1,8 @@
 import streamlit as st
 import feedparser
 
-# Configuração da página
-st.set_page_config(page_title="Meu Radar de Notícias", page_icon="🌍")
+# Configuração da página para Mac e Telemóvel
+st.set_page_config(page_title="Meu Radar de Notícias", page_icon="🌍", layout="wide")
 
 st.title("🌍 Radar Global em Português")
 st.markdown("---")
@@ -15,17 +15,17 @@ canais = {
     "⚽ Desporto (A Bola)": "https://www.abola.pt/rss/0"
 }
 
-# Barra Lateral para escolha
+# Barra Lateral
 st.sidebar.header("Configurações")
 escolha = st.sidebar.selectbox("Selecione o canal:", list(canais.keys()))
-num_noticias = st.sidebar.slider("Quantas notícias quer ver?", 5, 20, 10)
+num_noticias = st.sidebar.slider("Quantas notícias quer ver?", 5, 30, 10)
 
-# Função para ler os dados
+# Função para ler os dados do jornal
 def ler_feed(url):
     feed = feedparser.parse(url)
     return feed.entries[:num_noticias]
 
-# Botão principal
+# Botão principal de atualização
 if st.button(f"Atualizar {escolha} 🔄"):
     with st.spinner('A consultar os satélites...'):
         noticias = ler_feed(canais[escolha])
@@ -34,13 +34,20 @@ if st.button(f"Atualizar {escolha} 🔄"):
             st.error("Não consegui carregar as notícias. Tente outra fonte.")
         
         for item in noticias:
+            # Criamos uma caixa expansível para cada notícia
             with st.expander(f"📌 {item.title}"):
-                st.markdown(resumo, unsafe_allow_html=True)
+                st.write(f"**Publicado em:** {item.published}")
                 st.write("---")
-                # Alguns feeds mandam um resumo (summary), outros não
-                resumo = item.get('summary', 'Clique no link para ler o artigo completo.')
-                st.write(resumo)
-                st.markdown(f"[🔗 Ler notícia no site]({item.link})")
+                
+                # Vamos buscar o texto (summary) de forma segura
+                conteudo = item.get('summary', 'Clique no link para ler o artigo completo.')
+                
+                # Mostra o conteúdo interpretando as imagens (HTML)
+                st.markdown(conteudo, unsafe_allow_html=True)
+                
+                # Link direto para o jornal
+                st.markdown(f"**[🔗 Ler notícia completa no site]({item.link})**")
 
+# Rodapé informativo
 st.sidebar.markdown("---")
-st.sidebar.write("💡 **Dica:** Use o slider acima para controlar o tamanho da sua lista de leitura.")
+st.sidebar.info("💡 Este radar filtra publicidade e mostra apenas a informação essencial.")
