@@ -35,7 +35,7 @@ if st.button(f"Atualizar {escolha} 🔄"):
         
         for item in noticias:
             with st.expander(f"📌 {item.title}"):
-                st.write(f"**Publicado em:** {item.published}")
+                st.markdown(resumo, unsafe_allow_html=True)
                 st.write("---")
                 # Alguns feeds mandam um resumo (summary), outros não
                 resumo = item.get('summary', 'Clique no link para ler o artigo completo.')
