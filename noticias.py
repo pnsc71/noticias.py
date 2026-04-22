@@ -46,19 +46,31 @@ fontes = [
     {"nome": "CNN (EUA)", "url": "http://rss.cnn.com/rss/edition.rss", "cor": "🇺🇸", "traduzir": True},
     {"nome": "BBC (UK)", "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "cor": "🇬🇧", "traduzir": True}
 ]
-
-# 4. Sidebar e Voz
+# 4. Sidebar e Voz (Versão simplificada para iPhone)
 with st.sidebar:
     st.header("🤖 Briefing de Voz")
+    
+    # Criamos um botão simples. No iPhone, menos é mais.
     if st.button("🔊 Gerar Áudio"):
-        with st.spinner("A preparar voz..."):
-            resumo = "Resumo das notícias. "
-            for fonte in fontes[:3]:
-                feed = feedparser.parse(fonte['url'])
-                if feed.entries:
-                    tit = feed.entries[0].title
-                    resumo += f"Na {fonte['nome']}: {traduzir_pt(tit) if fonte['traduzir'] else tit}. "
-            st.audio(gerar_audio(resumo), format='audio/mp3')
+        resumo_texto = "Olá Pedro. Aqui tens o resumo. "
+        
+        # Vamos buscar apenas os 3 primeiros títulos para ser rápido
+        for fonte in fontes[:3]:
+            feed = feedparser.parse(fonte['url'])
+            if feed.entries:
+                t_raw = feed.entries[0].title
+                t_pt = traduzir_pt(t_raw) if fonte['traduzir'] else html.unescape(t_raw)
+                resumo_texto += f"Na {fonte['nome']}: {t_pt}. "
+        
+        # Gerar o áudio
+        audio_data = gerar_audio(resumo_texto)
+        
+        # Exibir o leitor
+        st.audio(audio_data, format='audio/mp3')
+        st.success("Áudio pronto! Clica no Play.")
+
+    st.divider()
+    st.caption("Nota: No iPhone, desliga o botão lateral do silêncio (laranja) para o som sair.")
 
 # 5. Grelha Principal
 col1, col2 = st.columns(2)
