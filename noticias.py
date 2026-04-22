@@ -1,53 +1,67 @@
 import streamlit as st
 import feedparser
 
-# Configuração da página para Mac e Telemóvel
-st.set_page_config(page_title="Meu Radar de Notícias", page_icon="🌍", layout="wide")
+# 1. Configuração para ocupar o ecrã todo (Wide Mode)
+st.set_page_config(page_title="Radar Global 360", page_icon="🌍", layout="wide")
 
-st.title("🌍 Radar Global em Português")
+st.title("🌍 Radar Global: Últimas de Portugal e do Mundo")
+st.markdown("_As últimas 5 notícias de cada fonte em tempo real_")
 st.markdown("---")
 
-# Lista de feeds RSS de confiança
-canais = {
-    "🌍 Geral (RTP)": "https://www.rtp.pt/noticias/rss",
-    "💰 Economia (Jornal de Negócios)": "https://www.jornaldenegocios.pt/rss",
-    "💻 Tecnologia (Pplware)": "https://pplware.sapo.pt/feed/",
-    "⚽ Desporto (A Bola)": "https://www.abola.pt/rss/0"
+# 2. Lista expandida de canais
+fontes = {
+    "RTP Notícias": "https://www.rtp.pt/noticias/rss",
+    "Público": "https://www.publico.pt/rss/ultimas",
+    "Expresso": "https://expresso.pt/arc/outboundfeeds/rss/",
+    "Observador": "https://observador.pt/feed/",
+    "Jornal de Negócios": "https://www.jornaldenegocios.pt/rss",
+    "Pplware (Tech)": "https://pplware.sapo.pt/feed/",
+    "A Bola": "https://www.abola.pt/rss/0"
 }
 
-# Barra Lateral
-st.sidebar.header("Configurações")
-escolha = st.sidebar.selectbox("Selecione o canal:", list(canais.keys()))
-num_noticias = st.sidebar.slider("Quantas notícias quer ver?", 5, 30, 10)
-
-# Função para ler os dados do jornal
-def ler_feed(url):
+# 3. Função para ler os dados
+def ler_ultimas(url, limite=5):
     feed = feedparser.parse(url)
-    return feed.entries[:num_noticias]
+    return feed.entries[:limite]
 
-# Botão principal de atualização
-if st.button(f"Atualizar {escolha} 🔄"):
-    with st.spinner('A consultar os satélites...'):
-        noticias = ler_feed(canais[escolha])
+# 4. Criação da Grelha (Layout)
+# Vamos organizar em 2 colunas grandes para ficar bem no Mac e no Telemóvel
+col1, col2 = st.columns(2)
+
+# Variável para alternar entre as colunas
+contador = 0
+
+for nome, url in fontes.items():
+    # Decide em que coluna colocar a fonte atual
+    coluna_atual = col1 if contador % 2 == 0 else col2
+    
+    with coluna_atual:
+        st.subheader(f"🗞️ {nome}")
+        noticias = ler_ultimas(url)
         
         if not noticias:
-            st.error("Não consegui carregar as notícias. Tente outra fonte.")
+            st.warning(f"Não foi possível carregar {nome}")
         
         for item in noticias:
-            # Criamos uma caixa expansível para cada notícia
-            with st.expander(f"📌 {item.title}"):
-                st.write(f"**Publicado em:** {item.published}")
-                st.write("---")
+            with st.expander(f"{item.title}"):
+                # Se houver data de publicação, mostra
+                if hasattr(item, 'published'):
+                    st.caption(f"🕒 {item.published}")
                 
-                # Vamos buscar o texto (summary) de forma segura
-                conteudo = item.get('summary', 'Clique no link para ler o artigo completo.')
+                # Resumo da notícia
+                resumo = item.get('summary', 'Sem resumo disponível.')
+                st.markdown(resumo, unsafe_allow_html=True)
                 
-                # Mostra o conteúdo interpretando as imagens (HTML)
-                st.markdown(conteudo, unsafe_allow_html=True)
-                
-                # Link direto para o jornal
-                st.markdown(f"**[🔗 Ler notícia completa no site]({item.link})**")
+                # Link
+                st.markdown(f"[🔗 Ler no site]({item.link})")
+        
+        st.markdown("---") # Linha separadora entre jornais
+    
+    contador += 1
 
-# Rodapé informativo
-st.sidebar.markdown("---")
-st.sidebar.info("💡 Este radar filtra publicidade e mostra apenas a informação essencial.")
+# Rodapé
+st.sidebar.title("Configurações")
+if st.sidebar.button("Forçar Atualização Geral 🔄"):
+    st.rerun()
+
+st.sidebar.info("Este radar organiza automaticamente as notícias em grelha para uma leitura rápida.")
