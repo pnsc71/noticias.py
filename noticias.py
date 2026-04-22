@@ -1,37 +1,56 @@
 import streamlit as st
 import feedparser
-from deep_translator import MyMemoryTranslator
-import re
+from deep_translator import GoogleTranslator
 
-st.set_page_config(page_title="Radar Portugal Pro", page_icon="📡", layout="wide")
-st.title("📡 Radar Mundial (Português de Portugal)")
+# 1. Configuração da Página
+st.set_page_config(page_title="Radar Mundial Traduzido", page_icon="🌍", layout="wide")
 
-@st.cache_data(ttl=600)
-def traduzir_pt(texto):
-    if not texto: return ""
+st.title("🌍 Radar Global: Tradução em Tempo Real")
+st.markdown("_As notícias do mundo, traduzidas automaticamente para si._")
+st.markdown("---")
+
+# 2. Fontes Internacionais (Inglês)
+fontes = {
+    "CNN Internacional (EUA)": "http://rss.cnn.com/rss/edition.rss",
+    "BBC World News (UK)": "http://feeds.bbci.co.uk/news/world/rss.xml",
+    "Al Jazeera (Mundo)": "https://www.aljazeera.com/xml/rss/all.xml",
+    "RTP Notícias (PT)": "https://www.rtp.pt/noticias/rss" # Para comparar
+}
+
+# 3. Função de Tradução
+def traduzir_texto(texto):
     try:
-        texto_limpo = re.sub('<[^<]+?>', '', texto)
-        # Aqui está a correção: source='en-GB' em vez de 'auto'
-        traducao = MyMemoryTranslator(source='en-GB', target='pt-PT').translate(texto_limpo)
+        # Traduz do inglês (auto) para o português
+        traducao = GoogleTranslator(source='auto', target='pt').translate(texto)
         return traducao
     except:
-        return texto
+        return texto # Se falhar, mostra o original
 
-fontes = [
-    {"nome": "CNN (EUA)", "url": "http://rss.cnn.com/rss/edition.rss", "cor": "🔴"},
-    {"nome": "BBC (UK)", "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "cor": "⚪"},
-    {"nome": "Al Jazeera", "url": "https://www.aljazeera.com/xml/rss/all.xml", "cor": "🟠"}
-]
-
+# 4. Grelha de exibição
 col1, col2 = st.columns(2)
-for i, fonte in enumerate(fontes):
-    coluna = col1 if i % 2 == 0 else col2
-    with coluna:
-        st.subheader(f"{fonte['cor']} {fonte['nome']}")
-        feed = feedparser.parse(fonte['url'])
-        for item in feed.entries[:5]:
-            titulo = traduzir_pt(item.title)
-            with st.expander(f"📌 {titulo}"):
-                resumo = traduzir_pt(item.get('summary', ''))
-                st.write(resumo)
-                st.markdown(f"[🔗 Ver original]({item.link})")
+contador = 0
+
+for nome, url in fontes.items():
+    coluna_atual = col1 if contador % 2 == 0 else col2
+    
+    with coluna_atual:
+        st.subheader(f"🗞️ {nome}")
+        feed = feedparser.parse(url)
+        noticias = feed.entries[:5]
+        
+        for item in noticias:
+            with st.expander(f"📌 {traduzir_texto(item.title)}"):
+                st.caption(f"🕒 {item.get('published', '')}")
+                
+                # Traduzimos o resumo
+                resumo_original = item.get('summary', '')
+                if resumo_original:
+                    resumo_pt = traduzir_texto(resumo_original)
+                    st.markdown(resumo_pt, unsafe_allow_html=True)
+                
+                st.markdown(f"**[🔗 Link Original]({item.link})**")
+        st.markdown("---")
+    
+    contador += 1
+
+st.sidebar.info("💡 Nota: A tradução é feita automaticamente via Google Translator.")
