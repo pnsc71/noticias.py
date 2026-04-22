@@ -4,8 +4,8 @@ from deep_translator import GoogleTranslator
 import re
 import html
 
-# 1. Setup & Design iOS-Ready
-st.set_page_config(page_title="Radar Elite Global", page_icon="📡", layout="wide")
+# 1. Design Otimizado para iPhone
+st.set_page_config(page_title="Radar Elite", page_icon="📡", layout="wide")
 
 IMAGEM_FIXA = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&h=300&q=80"
 
@@ -55,7 +55,7 @@ st.markdown(f"""
     .card-text {{
         font-size: 13px;
         color: #bbb;
-        height: 60px;
+        height: 55px;
         overflow: hidden;
         display: -webkit-box;
         -webkit-line-clamp: 3;
@@ -64,7 +64,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Tradutor Otimizado
+# 2. Motor de Tradução
 @st.cache_data(ttl=600)
 def traduzir_pt(texto):
     if not texto: return ""
@@ -73,36 +73,43 @@ def traduzir_pt(texto):
         return GoogleTranslator(source='en', target='pt').translate(texto_limpo[:250])
     except: return texto
 
-# 3. Fontes Estratégicas (IA, Futebol, HA)
+# 3. Fontes de Informação (O Plantel de Luxo)
 fontes = [
-    # --- INTELIGÊNCIA ARTIFICIAL ---
+    # --- MUNDO & USA ---
+    {"n": "New York Times", "u": "https://rss.nytimes.com/services/xml/rss/nyt/World.xml", "tr": True},
+    {"n": "CNN International", "u": "http://rss.cnn.com/rss/edition.rss", "tr": True},
+    {"n": "BBC News", "u": "http://feeds.bbci.co.uk/news/world/rss.xml", "tr": True},
+    
+    # --- PORTUGAL (Geral & Rádio) ---
+    {"n": "RTP Notícias", "u": "https://www.rtp.pt/noticias/rss", "tr": False},
+    {"n": "Observador", "u": "https://observador.pt/feed/", "tr": False},
+    {"n": "TSF", "u": "https://www.tsf.pt/rss/noticias/portugal.xml", "tr": False},
+    {"n": "CNN Portugal", "u": "https://cnnportugal.iol.pt/rss", "tr": False},
+    
+    # --- IA & TECH ---
     {"n": "MIT Tech Review (IA)", "u": "https://www.technologyreview.com/topic/artificial-intelligence/feed/", "tr": True},
-    {"n": "Wired AI", "u": "https://www.wired.com/feed/category/ai/latest/rss", "tr": True},
+    {"n": "Pplware", "u": "https://pplware.sapo.pt/feed/", "tr": False},
+    {"n": "The Ambient (HA)", "u": "https://www.the-ambient.com/rss", "tr": True},
     
     # --- FUTEBOL ---
     {"n": "A Bola", "u": "https://www.abola.pt/rss/0", "tr": False},
-    {"n": "Record", "u": "https://www.record.pt/rss", "tr": False},
-    
-    # --- HOME AUTOMATION (HA) ---
-    {"n": "The Ambient (Smart Home)", "u": "https://www.the-ambient.com/rss", "tr": True},
-    {"n": "Android Central (HA)", "u": "https://www.androidcentral.com/home-automation/rss.xml", "tr": True},
-    
-    # --- MUNDO & PORTUGAL ---
-    {"n": "CNN Portugal", "u": "https://cnnportugal.iol.pt/rss", "tr": False},
-    {"n": "Pplware", "u": "https://pplware.sapo.pt/feed/", "tr": False}
+    {"n": "Record", "u": "https://www.record.pt/rss", "tr": False}
 ]
 
 # 4. Processamento
 st.title("🛰️ Radar Elite")
-st.caption("Foco: IA, Futebol e Domótica")
+st.caption(f"A monitorizar {len(fontes)} fontes de referência")
 
 all_items = []
 for f in fontes:
-    feed = feedparser.parse(f['u'])
-    for entry in feed.entries[:3]:
-        entry['fn'] = f['n']
-        entry['tr'] = f['tr']
-        all_items.append(entry)
+    try:
+        feed = feedparser.parse(f['u'])
+        for entry in feed.entries[:2]: # Top 2 de cada fonte
+            entry['fn'] = f['n']
+            entry['tr'] = f['tr']
+            all_items.append(entry)
+    except:
+        continue
 
 # 5. Grelha Visual
 cols = st.columns(2)
@@ -113,7 +120,7 @@ for i, item in enumerate(all_items):
         res = traduzir_pt(res_raw) if item['tr'] else html.unescape(res_raw)
         res = re.sub('<[^<]+?>', '', res)
         
-        is_b = any(p in tit.upper() for p in ["URGENTE", "ÚLTIMA", "BREAKING"])
+        is_b = any(p in tit.upper() for p in ["URGENTE", "ÚLTIMA", "BREAKING", "ALERTA"])
         c_class = "breaking-card" if is_b else "news-card"
         lbl = "🚨 ALERTA" if is_b else item['fn']
 
