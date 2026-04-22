@@ -4,25 +4,37 @@ from deep_translator import GoogleTranslator
 import re
 import html
 
-# 1. Configuração de Página
-st.set_page_config(page_title="Radar Pro", page_icon="📡", layout="wide")
+# 1. Configuração de Estilo "Revista"
+st.set_page_config(page_title="Radar News Pro", page_icon="📰", layout="wide")
 
-# Estilo para leitura limpa
 st.markdown("""
     <style>
-    .briefing-box {
+    /* Estilo dos Cards de Notícias */
+    .news-card {
         background-color: #1e212b;
         padding: 20px;
-        border-radius: 10px;
-        border-left: 5px solid #007bff;
-        margin-bottom: 25px;
+        border-radius: 15px;
+        border-bottom: 4px solid #007bff;
+        margin-bottom: 20px;
+        min-height: 200px;
+    }
+    .source-tag {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #007bff;
+        font-weight: bold;
+    }
+    .briefing-top {
+        background: linear-gradient(90deg, #007bff, #00d4ff);
+        color: white;
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 30px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📡 O Teu Radar: Portugal & Mundo")
-
-# 2. Funções de Tradução e Limpeza
+# 2. Tradução Otimizada
 @st.cache_data(ttl=300)
 def traduzir_pt(texto):
     if not texto: return ""
@@ -32,51 +44,53 @@ def traduzir_pt(texto):
     except:
         return texto
 
-# 3. Fontes Configuradas
+# 3. Fontes
 fontes = [
-    {"nome": "CNN Portugal", "url": "https://cnnportugal.iol.pt/rss", "traduzir": False},
-    {"nome": "RTP Notícias", "url": "https://www.rtp.pt/noticias/rss", "traduzir": False},
-    {"nome": "Pplware", "url": "https://pplware.sapo.pt/feed/", "traduzir": False},
-    {"nome": "CNN (EUA)", "url": "http://rss.cnn.com/rss/edition.rss", "traduzir": True},
-    {"nome": "BBC (UK)", "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "traduzir": True}
+    {"nome": "CNN Portugal", "url": "https://cnnportugal.iol.pt/rss", "tag": "MUNDO", "traduzir": False},
+    {"nome": "RTP Notícias", "url": "https://www.rtp.pt/noticias/rss", "tag": "PAÍS", "traduzir": False},
+    {"nome": "Pplware", "url": "https://pplware.sapo.pt/feed/", "tag": "TECH", "traduzir": False},
+    {"nome": "CNN EUA", "url": "http://rss.cnn.com/rss/edition.rss", "tag": "USA", "traduzir": True}
 ]
 
-# --- 4. O BRIEFING "ABRIR E LER" ---
-st.subheader("🤖 Resumo Inteligente")
+# --- 4. O TEU BRIEFING DE ENTRADA ---
+st.title("🛰️ Radar Intelligence")
 
-resumo_texto = ""
-# Vamos buscar a notícia principal de cada fonte para o resumo do topo
-for fonte in fontes:
-    feed = feedparser.parse(fonte['url'])
+# Preparar o resumo rápido
+briefing_itens = []
+for f in fontes:
+    feed = feedparser.parse(f['url'])
     if feed.entries:
-        tit_original = feed.entries[0].title
-        tit_final = traduzir_pt(tit_original) if fonte['traduzir'] else html.unescape(tit_original)
-        resumo_texto += f"**{fonte['nome']}**: {tit_final}  \n"
+        tit = traduzir_pt(feed.entries[0].title) if f['traduzir'] else html.unescape(feed.entries[0].title)
+        briefing_itens.append(f"• **{f['tag']}**: {tit}")
 
-# Mostra o resumo num bloco destacado
-st.markdown(f"""<div class="briefing-box">{resumo_texto}</div>""", unsafe_allow_html=True)
+st.markdown(f"""
+    <div class="briefing-top">
+        <h3>🚀 Resumo Rápido</h3>
+        {"<br>".join(briefing_itens)}
+    </div>
+    """, unsafe_allow_html=True)
 
-st.divider()
+# --- 5. GRELHA VISUAL (Tipo Stories/Cards) ---
+st.subheader("🔥 Últimas Horas")
 
-# --- 5. GRELHA COMPLETA ---
-col1, col2 = st.columns(2)
-for i, fonte in enumerate(fontes):
-    coluna = col1 if i % 2 == 0 else col2
-    with coluna:
-        st.write(f"### {fonte['nome']}")
-        feed = feedparser.parse(fonte['url'])
-        
-        for item in feed.entries[:5]:
-            if fonte['traduzir']:
-                titulo = traduzir_pt(item.title)
-                resumo = traduzir_pt(item.get('summary', ''))
-            else:
-                titulo = html.unescape(item.title)
-                resumo_raw = item.get('summary', '') or item.get('description', '')
-                resumo = html.unescape(resumo_raw)
-                resumo = re.sub('<[^<]+?>', '', resumo)
+# Criar colunas para os cards
+cols = st.columns(2)
 
-            with st.expander(f"📌 {titulo}"):
-                st.write(resumo)
-                st.caption(f"[Notícia completa]({item.link})")
-        st.write("---")
+for idx, f in enumerate(fontes):
+    col = cols[idx % 2]
+    feed = feedparser.parse(f['url'])
+    
+    with col:
+        for item in feed.entries[:3]:
+            titulo = traduzir_pt(item.title) if f['traduzir'] else html.unescape(item.title)
+            resumo = traduzir_pt(item.get('summary', '')) if f['traduzir'] else html.unescape(item.get('summary', '') or item.get('description', ''))
+            resumo = re.sub('<[^<]+?>', '', resumo)[:150] + "..." # Limita o texto para o card não ficar gigante
+
+            st.markdown(f"""
+                <div class="news-card">
+                    <span class="source-tag">{f['nome']} | {f['tag']}</span>
+                    <h4>{titulo}</h4>
+                    <p style="font-size: 14px; color: #ccc;">{resumo}</p>
+                    <a href="{item.link}" target="_blank" style="color: #00d4ff; text-decoration: none; font-weight: bold;">Ler mais →</a>
+                </div>
+                """, unsafe_allow_html=True)
