@@ -3,13 +3,15 @@ import feedparser
 from deep_translator import MyMemoryTranslator
 import re
 import html
+from gtts import gTTS
+import io
 
-# 1. Configuração e Estilo
-st.set_page_config(page_title="Radar Pro + Briefing", page_icon="📡", layout="wide")
+# 1. Configuração
+st.set_page_config(page_title="Radar Pro Voice", page_icon="📡", layout="wide")
 
-st.title("📡 Radar Mundial com Inteligência")
+st.title("📡 Radar Mundial com Voz")
 
-# 2. Função de Tradução
+# 2. Funções de Apoio
 @st.cache_data(ttl=600)
 def traduzir_pt(texto):
     if not texto: return ""
@@ -19,41 +21,43 @@ def traduzir_pt(texto):
     except:
         return texto
 
+def falar(texto):
+    # Cria o áudio em Português de Portugal (tld='pt')
+    tts = gTTS(text=texto, lang='pt', tld='pt')
+    fp = io.BytesIO()
+    tts.write_to_fp(fp)
+    return fp
+
 # 3. Fontes
 fontes = [
     {"nome": "CNN Portugal", "url": "https://cnnportugal.iol.pt/rss", "cor": "🔴", "traduzir": False},
     {"nome": "RTP Notícias", "url": "https://www.rtp.pt/noticias/rss", "cor": "🔵", "traduzir": False},
     {"nome": "Pplware", "url": "https://pplware.sapo.pt/feed/", "cor": "🟢", "traduzir": False},
     {"nome": "CNN (EUA)", "url": "http://rss.cnn.com/rss/edition.rss", "cor": "🇺🇸", "traduzir": True},
-    {"nome": "BBC (UK)", "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "cor": "🇬🇧", "traduzir": True},
-    {"nome": "Al Jazeera", "url": "https://www.aljazeera.com/xml/rss/all.xml", "cor": "🌍", "traduzir": True}
+    {"nome": "BBC (UK)", "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "cor": "🇬🇧", "traduzir": True}
 ]
 
-# --- NOVIDADE: O MOTOR DE RESUMO ---
-todos_os_titulos = []
-
-# Primeiro, vamos carregar os dados
-for fonte in fontes:
-    feed = feedparser.parse(fonte['url'])
-    for item in feed.entries[:3]: # Pegamos nos 3 principais de cada
-        titulo = traduzir_pt(item.title) if fonte['traduzir'] else html.unescape(item.title)
-        todos_os_titulos.append(f"{fonte['nome']}: {titulo}")
-
-# Interface na Barra Lateral
+# 4. Interface Lateral com Voz
 with st.sidebar:
-    st.header("🤖 Assistente de Resumo")
-    if st.button("✨ Diz-me o que perdi"):
-        st.subheader("O teu Briefing de hoje:")
-        with st.status("A analisar o mundo...", expanded=True):
-            # Aqui simulamos uma análise dos temas quentes
-            top_noticias = todos_os_titulos[:5] # Mostra as 5 mais frescas
-            for n in top_noticias:
-                st.write(f"• {n}")
-        st.success("Estás atualizado! Estes são os temas dominantes agora.")
-    st.markdown("---")
-    st.info("Este resumo analisa as 6 fontes em tempo real.")
+    st.header("🤖 Briefing de Voz")
+    if st.button("🔊 Ouvir Resumo"):
+        # Recolhe os títulos para o resumo
+        briefing_texto = "Aqui está o teu resumo de hoje. "
+        for fonte in fontes[:4]: # Usamos as 4 primeiras para não ser muito longo
+            feed = feedparser.parse(fonte['url'])
+            if feed.entries:
+                t = feed.entries[0].title
+                t_limpo = traduzir_pt(t) if fonte['traduzir'] else html.unescape(t)
+                briefing_texto += f"Na {fonte['nome']}: {t_limpo}. "
+        
+        st.write(briefing_texto)
+        
+        # Gera o áudio
+        audio_fp = falar(briefing_texto)
+        st.audio(audio_fp, format='audio/mp3')
+        st.success("Clica no Play para ouvir!")
 
-# --- GRELHA DE NOTÍCIAS (Igual ao anterior) ---
+# 5. Grelha de Notícias (Normal)
 col1, col2 = st.columns(2)
 for i, fonte in enumerate(fontes):
     coluna = col1 if i % 2 == 0 else col2
@@ -63,15 +67,12 @@ for i, fonte in enumerate(fontes):
         for item in feed.entries[:5]:
             if fonte['traduzir']:
                 titulo = traduzir_pt(item.title)
-                resumo_raw = item.get('summary', '')
-                resumo = traduzir_pt(resumo_raw)
+                resumo = traduzir_pt(item.get('summary', ''))
             else:
                 titulo = html.unescape(item.title)
-                resumo_raw = item.get('summary', '') or item.get('description', '')
-                resumo = html.unescape(resumo_raw)
+                resumo = html.unescape(item.get('summary', '') or item.get('description', ''))
                 resumo = re.sub('<[^<]+?>', '', resumo)
 
             with st.expander(f"📌 {titulo}"):
                 st.write(resumo)
-                st.caption(f"🔗 [Ler notícia]({item.link})")
-        st.write("---")
+                st.caption(f"🔗 [Link]({item.link})")
