@@ -1,30 +1,32 @@
 import streamlit as st
 import feedparser
+from deep_translator import GoogleTranslator
 
 # 1. Configuração da Página
-st.set_page_config(page_title="Radar Notícias Portugal", page_icon="🌍", layout="wide")
+st.set_page_config(page_title="Radar Mundial Traduzido", page_icon="🌍", layout="wide")
 
-st.title("🌍 Radar de Notícias: Fontes Ativas")
-st.markdown("_Apenas canais com sinal verde e atualizados_")
+st.title("🌍 Radar Global: Tradução em Tempo Real")
+st.markdown("_As notícias do mundo, traduzidas automaticamente para si._")
 st.markdown("---")
 
-# 2. Lista de fontes TESTADAS e que funcionam bem em leitores RSS
+# 2. Fontes Internacionais (Inglês)
 fontes = {
-    "CNN Portugal": "https://cnnportugal.iol.pt/rss",
-    "RTP Notícias": "https://www.rtp.pt/noticias/rss",
-    "Observador (Últimas)": "https://observador.pt/feed/",
-    "Jornal de Negócios": "https://www.jornaldenegocios.pt/rss",
-    "Pplware (Tecnologia)": "https://pplware.sapo.pt/feed/",
-    "MaisFutebol (Desporto)": "https://maisfutebol.iol.pt/rss",
-    "PC Guia (Gadgets)": "https://www.pcguia.pt/feed/"
+    "CNN Internacional (EUA)": "http://rss.cnn.com/rss/edition.rss",
+    "BBC World News (UK)": "http://feeds.bbci.co.uk/news/world/rss.xml",
+    "Al Jazeera (Mundo)": "https://www.aljazeera.com/xml/rss/all.xml",
+    "RTP Notícias (PT)": "https://www.rtp.pt/noticias/rss" # Para comparar
 }
 
-# 3. Função de leitura
-def ler_ultimas(url, limite=5):
-    feed = feedparser.parse(url)
-    return feed.entries[:limite]
+# 3. Função de Tradução
+def traduzir_texto(texto):
+    try:
+        # Traduz do inglês (auto) para o português
+        traducao = GoogleTranslator(source='auto', target='pt').translate(texto)
+        return traducao
+    except:
+        return texto # Se falhar, mostra o original
 
-# 4. Grelha em 2 colunas
+# 4. Grelha de exibição
 col1, col2 = st.columns(2)
 contador = 0
 
@@ -33,33 +35,22 @@ for nome, url in fontes.items():
     
     with coluna_atual:
         st.subheader(f"🗞️ {nome}")
-        noticias = ler_ultimas(url)
-        
-        if not noticias:
-            st.info(f"O feed de {nome} está a ser filtrado pela fonte.")
+        feed = feedparser.parse(url)
+        noticias = feed.entries[:5]
         
         for item in noticias:
-            with st.expander(f"{item.title}"):
-                if hasattr(item, 'published'):
-                    st.caption(f"🕒 {item.published}")
+            with st.expander(f"📌 {traduzir_texto(item.title)}"):
+                st.caption(f"🕒 {item.get('published', '')}")
                 
-                # Vai buscar o resumo
-                resumo = item.get('summary', '')
-                if not resumo and 'description' in item:
-                    resumo = item.description
+                # Traduzimos o resumo
+                resumo_original = item.get('summary', '')
+                if resumo_original:
+                    resumo_pt = traduzir_texto(resumo_original)
+                    st.markdown(resumo_pt, unsafe_allow_html=True)
                 
-                # Exibe o conteúdo e fotos
-                st.markdown(resumo, unsafe_allow_html=True)
-                st.markdown(f"**[🔗 Ver no site]({item.link})**")
-        
-        st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown(f"**[🔗 Link Original]({item.link})**")
+        st.markdown("---")
     
     contador += 1
 
-# Sidebar
-st.sidebar.title("Comandos")
-if st.sidebar.button("Atualizar Tudo 🔄"):
-    st.rerun()
-
-st.sidebar.markdown("---")
-st.sidebar.success("✅ As fontes selecionadas são compatíveis com o teu radar.")
+st.sidebar.info("💡 Nota: A tradução é feita automaticamente via Google Translator.")
