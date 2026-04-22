@@ -4,8 +4,8 @@ from deep_translator import GoogleTranslator
 import re
 import html
 
-# 1. Configuração e Design Mobile-First
-st.set_page_config(page_title="Radar Elite", page_icon="📡", layout="wide")
+# 1. Setup & Design iOS-Ready
+st.set_page_config(page_title="Radar Elite Global", page_icon="📡", layout="wide")
 
 IMAGEM_FIXA = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&h=300&q=80"
 
@@ -17,7 +17,7 @@ st.markdown(f"""
         border-radius: 12px;
         border-bottom: 4px solid #007bff;
         margin-bottom: 15px;
-        height: 420px; /* Altura fixa para manter a grelha alinhada */
+        height: 410px;
         overflow: hidden;
     }}
     .breaking-card {{
@@ -26,13 +26,11 @@ st.markdown(f"""
         border-radius: 12px;
         border: 2px solid #ff4b4b;
         margin-bottom: 15px;
-        height: 420px;
-        overflow: hidden;
+        height: 410px;
     }}
     .img-container img {{
         width: 100%;
         border-radius: 8px;
-        margin-bottom: 10px;
         object-fit: cover;
         height: 140px;
     }}
@@ -48,7 +46,7 @@ st.markdown(f"""
         font-size: 16px;
         font-weight: bold;
         margin-top: 10px;
-        height: 60px; /* Força o título a ocupar 3 linhas no máximo */
+        height: 55px;
         overflow: hidden;
         display: -webkit-box;
         -webkit-line-clamp: 3;
@@ -57,68 +55,74 @@ st.markdown(f"""
     .card-text {{
         font-size: 13px;
         color: #bbb;
-        height: 60px; /* Limita o resumo para não empurrar o card */
+        height: 60px;
         overflow: hidden;
         display: -webkit-box;
         -webkit-line-clamp: 3;
         -webkit-box-orient: vertical;
-        margin-bottom: 10px;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Motor de Tradução
-@st.cache_data(ttl=300)
+# 2. Tradutor Otimizado
+@st.cache_data(ttl=600)
 def traduzir_pt(texto):
     if not texto: return ""
     try:
         texto_limpo = html.unescape(re.sub('<[^<]+?>', '', texto)).strip()
-        return GoogleTranslator(source='en', target='pt').translate(texto_limpo)
+        return GoogleTranslator(source='en', target='pt').translate(texto_limpo[:250])
     except: return texto
 
-# 3. Fontes
+# 3. Fontes Estratégicas (IA, Futebol, HA)
 fontes = [
-    {"nome": "CNN Portugal", "url": "https://cnnportugal.iol.pt/rss", "traduzir": False},
-    {"nome": "A Bola", "url": "https://www.abola.pt/rss/0", "traduzir": False},
-    {"nome": "Pplware", "url": "https://pplware.sapo.pt/feed/", "traduzir": False},
-    {"nome": "Público", "url": "https://www.publico.pt/rss/politica", "traduzir": False},
-    {"nome": "BBC World", "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "traduzir": True}
+    # --- INTELIGÊNCIA ARTIFICIAL ---
+    {"n": "MIT Tech Review (IA)", "u": "https://www.technologyreview.com/topic/artificial-intelligence/feed/", "tr": True},
+    {"n": "Wired AI", "u": "https://www.wired.com/feed/category/ai/latest/rss", "tr": True},
+    
+    # --- FUTEBOL ---
+    {"n": "A Bola", "u": "https://www.abola.pt/rss/0", "tr": False},
+    {"n": "Record", "u": "https://www.record.pt/rss", "tr": False},
+    
+    # --- HOME AUTOMATION (HA) ---
+    {"n": "The Ambient (Smart Home)", "u": "https://www.the-ambient.com/rss", "tr": True},
+    {"n": "Android Central (HA)", "u": "https://www.androidcentral.com/home-automation/rss.xml", "tr": True},
+    
+    # --- MUNDO & PORTUGAL ---
+    {"n": "CNN Portugal", "u": "https://cnnportugal.iol.pt/rss", "tr": False},
+    {"n": "Pplware", "u": "https://pplware.sapo.pt/feed/", "tr": False}
 ]
 
-# 4. Título
+# 4. Processamento
 st.title("🛰️ Radar Elite")
+st.caption("Foco: IA, Futebol e Domótica")
 
-# 5. Agregação e Grelha
 all_items = []
 for f in fontes:
-    feed = feedparser.parse(f['url'])
-    for entry in feed.entries[:4]:
-        entry['fonte_nome'] = f['nome']
-        entry['precisa_traducao'] = f['traduzir']
+    feed = feedparser.parse(f['u'])
+    for entry in feed.entries[:3]:
+        entry['fn'] = f['n']
+        entry['tr'] = f['tr']
         all_items.append(entry)
 
+# 5. Grelha Visual
 cols = st.columns(2)
 for i, item in enumerate(all_items):
-    col_idx = i % 2
-    with cols[col_idx]:
-        titulo = traduzir_pt(item.title) if item['precisa_traducao'] else html.unescape(item.title)
-        resumo_raw = item.get('summary', '') or item.get('description', '')
-        resumo = traduzir_pt(resumo_raw) if item['precisa_traducao'] else html.unescape(resumo_raw)
-        resumo = re.sub('<[^<]+?>', '', resumo)
+    with cols[i % 2]:
+        tit = traduzir_pt(item.title) if item['tr'] else html.unescape(item.title)
+        res_raw = item.get('summary', '') or item.get('description', '')
+        res = traduzir_pt(res_raw) if item['tr'] else html.unescape(res_raw)
+        res = re.sub('<[^<]+?>', '', res)
         
-        palavras_alerta = ["URGENTE", "ÚLTIMA HORA", "BOMBA", "BREAKING"]
-        is_breaking = any(p in titulo.upper() for p in palavras_alerta)
-        card_class = "breaking-card" if is_breaking else "news-card"
-        label = "🚨 URGENTE" if is_breaking else item['fonte_nome']
+        is_b = any(p in tit.upper() for p in ["URGENTE", "ÚLTIMA", "BREAKING"])
+        c_class = "breaking-card" if is_b else "news-card"
+        lbl = "🚨 ALERTA" if is_b else item['fn']
 
         st.markdown(f"""
-            <div class="{card_class}">
-                <div class="img-container">
-                    <img src="{IMAGEM_FIXA}">
-                </div>
-                <span class="tag">{label}</span>
-                <div class="card-title">{titulo}</div>
-                <div class="card-text">{resumo}</div>
-                <a href="{item.link}" target="_blank" style="color: #007bff; text-decoration: none; font-size: 13px; font-weight: bold;">LER MAIS →</a>
+            <div class="{c_class}">
+                <div class="img-container"><img src="{IMAGEM_FIXA}"></div>
+                <span class="tag">{lbl}</span>
+                <div class="card-title">{tit}</div>
+                <div class="card-text">{res}</div>
+                <a href="{item.link}" target="_blank" style="color:#007bff; text-decoration:none; font-weight:bold; font-size:12px;">LER MAIS →</a>
             </div>
             """, unsafe_allow_html=True)
