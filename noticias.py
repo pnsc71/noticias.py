@@ -6,29 +6,27 @@ import html
 from gtts import gTTS
 import io
 
-# 1. Configuração
+# 1. Configuração e Estilo
 st.set_page_config(page_title="Radar Pro", page_icon="📡", layout="wide")
-st.title("📡 Radar Mundial: Portugal & Mundo")
 
-# 2. Função de Tradução Robusta
+# Estética para o iPhone (fundo escuro e botões visíveis)
+st.markdown("""
+    <style>
+    .stAudio { margin-bottom: 20px; }
+    .reportview-container { background: #0e1117; }
+    </style>
+    """, unsafe_allow_html=True)
+
+st.title("📡 O Teu Radar: Portugal & Mundo")
+
+# 2. Funções de Apoio (Otimizadas)
 @st.cache_data(ttl=300)
 def traduzir_pt(texto):
     if not texto: return ""
     try:
-        # Limpa o lixo antes de enviar para tradução
         texto_limpo = html.unescape(re.sub('<[^<]+?>', '', texto)).strip()
-        
-        # GoogleTranslator é mais estável que o MyMemory para uso gratuito
-        traducao = GoogleTranslator(source='en', target='pt').translate(texto_limpo)
-        
-        # Pequeno ajuste manual para termos comuns de Portugal
-        correcoes = {"equipe": "equipa", "usuário": "utilizador", "tela": "ecrã"}
-        for br, pt in correcoes.items():
-            traducao = traducao.replace(br, pt)
-            
-        return traducao
-    except Exception as e:
-        # Se falhar, devolve o original para a app não dar erro
+        return GoogleTranslator(source='en', target='pt').translate(texto_limpo)
+    except:
         return texto
 
 def gerar_audio(texto):
@@ -40,44 +38,41 @@ def gerar_audio(texto):
 
 # 3. Fontes
 fontes = [
-    {"nome": "CNN Portugal", "url": "https://cnnportugal.iol.pt/rss", "cor": "🔴", "traduzir": False},
-    {"nome": "RTP Notícias", "url": "https://www.rtp.pt/noticias/rss", "cor": "🔵", "traduzir": False},
-    {"nome": "Pplware", "url": "https://pplware.sapo.pt/feed/", "cor": "🟢", "traduzir": False},
-    {"nome": "CNN (EUA)", "url": "http://rss.cnn.com/rss/edition.rss", "cor": "🇺🇸", "traduzir": True},
-    {"nome": "BBC (UK)", "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "cor": "🇬🇧", "traduzir": True}
+    {"nome": "CNN Portugal", "url": "https://cnnportugal.iol.pt/rss", "traduzir": False},
+    {"nome": "RTP Notícias", "url": "https://www.rtp.pt/noticias/rss", "traduzir": False},
+    {"nome": "Pplware", "url": "https://pplware.sapo.pt/feed/", "traduzir": False},
+    {"nome": "CNN (EUA)", "url": "http://rss.cnn.com/rss/edition.rss", "traduzir": True},
+    {"nome": "BBC (UK)", "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "traduzir": True}
 ]
-# 4. Sidebar e Voz (Versão simplificada para iPhone)
-with st.sidebar:
-    st.header("🤖 Briefing de Voz")
-    
-    # Criamos um botão simples. No iPhone, menos é mais.
-    if st.button("🔊 Gerar Áudio"):
-        resumo_texto = "Olá Pedro. Aqui tens o resumo. "
-        
-        # Vamos buscar apenas os 3 primeiros títulos para ser rápido
-        for fonte in fontes[:3]:
-            feed = feedparser.parse(fonte['url'])
-            if feed.entries:
-                t_raw = feed.entries[0].title
-                t_pt = traduzir_pt(t_raw) if fonte['traduzir'] else html.unescape(t_raw)
-                resumo_texto += f"Na {fonte['nome']}: {t_pt}. "
-        
-        # Gerar o áudio
-        audio_data = gerar_audio(resumo_texto)
-        
-        # Exibir o leitor
-        st.audio(audio_data, format='audio/mp3')
-        st.success("Áudio pronto! Clica no Play.")
 
-    st.divider()
-    st.caption("Nota: No iPhone, desliga o botão lateral do silêncio (laranja) para o som sair.")
+# --- 4. SECÇÃO "ABRIR E JÁ ESTÁ" (NO TOPO) ---
+st.subheader("🤖 O Teu Briefing de Voz")
 
-# 5. Grelha Principal
+# Gerar o texto do resumo automaticamente
+resumo_completo = "Olá Pedro! Aqui está o essencial de agora. "
+for fonte in fontes[:4]:
+    feed = feedparser.parse(fonte['url'])
+    if feed.entries:
+        tit_original = feed.entries[0].title
+        tit_final = traduzir_pt(tit_original) if fonte['traduzir'] else html.unescape(tit_original)
+        resumo_completo += f"Na {fonte['nome']}, destaca-se: {tit_final}. "
+
+# Mostrar o texto do resumo logo de cara
+st.info(resumo_completo)
+
+# Gerar e mostrar o áudio logo abaixo do texto
+audio_fp = gerar_audio(resumo_completo)
+st.audio(audio_fp, format='audio/mp3')
+st.caption("☝️ Carrega no Play para ouvir o resumo")
+
+st.divider()
+
+# --- 5. GRELHA DE NOTÍCIAS DETALHADA ---
 col1, col2 = st.columns(2)
 for i, fonte in enumerate(fontes):
     coluna = col1 if i % 2 == 0 else col2
     with coluna:
-        st.subheader(f"{fonte['cor']} {fonte['nome']}")
+        st.write(f"### {fonte['nome']}")
         feed = feedparser.parse(fonte['url'])
         for item in feed.entries[:5]:
             if fonte['traduzir']:
@@ -90,4 +85,4 @@ for i, fonte in enumerate(fontes):
 
             with st.expander(f"📌 {titulo}"):
                 st.write(resumo)
-                st.caption(f"🔗 [Link]({item.link})")
+                st.caption(f"[Notícia completa]({item.link})")
