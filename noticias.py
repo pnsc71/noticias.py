@@ -1,3 +1,4 @@
+import html
 import streamlit as st
 import feedparser
 from deep_translator import MyMemoryTranslator
